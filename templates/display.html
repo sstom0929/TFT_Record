@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="refresh" content="60">
+	<title>DashBoard</title>
+	<link rel="stylesheet" href="../static/displayStyle.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+	<script type="text/javascript">
+		function cardinalToOrdinal(num)
+		{
+			switch(num)
+			{
+				case 1: return num + "st";
+				case 2: return num + "nd";
+				case 3: return num + "rd";
+				default: return num + "th";
+			}
+		}
+
+		function init()
+        {
+			var socket = io();
+			socket.on('UpdateMain', function(data) {
+				UpdateMain(data);
+			});
+			socket.on('InsertRecord', function(data) {
+				InsertRecordIntoTable(data);
+			});
+			socket.on('DeleteRecord', function(data) {
+				DeleteRecordFromTable(data);
+			});
+			socket.on('UpdateRecord', function(data) {
+				UpdateRecordIntoTable(data);
+			});
+
+            var data = {{ data|safe }};
+            console.log(data);
+
+			// Initial MMR Table
+            var mmrData = {};
+            data['main'].forEach(
+            	row =>
+            	{
+            		mmrData[row["Key"]] = row["Value"];
+            	}
+            )
+			UpdateMain(mmrData);
+
+            // Initial Record Table
+            data["record"].forEach(
+            	row =>
+            	{
+            		InsertRecordIntoTable(row);
+            	}
+            )
+        }
+
+		function UpdateMain(data)
+		{
+			document.getElementById("mirageEffect").innerHTML = data["mirageEffect"];
+			document.getElementById("nomsyOrigin").innerHTML = data["nomsyOrigin"];
+
+			switch(data["startMMRGroup"])
+			{
+				case '大師':
+				case '宗師':
+				case '菁英':
+					document.getElementById("startMMR").innerHTML = data["startMMRGroup"] + " " + data["startMMRValue"];
+					break;
+				default:
+					document.getElementById("startMMR").innerHTML = data["startMMRGroup"] + data["startMMRSubgroup"] + " " + data["startMMRValue"];
+			}
+
+			switch(data["currentMMRGroup"])
+			{
+				case '大師':
+				case '宗師':
+				case '菁英':
+					document.getElementById("currentMMR").innerHTML = data["currentMMRGroup"] + data["currentMMRSubgroup"] + " " + data["currentMMRValue"];
+					break;
+				default:
+					document.getElementById("currentMMR").innerHTML = data["currentMMRGroup"] + data["currentMMRSubgroup"] + " " + data["currentMMRValue"];
+			}
+		}
+
+		function InsertRecordIntoTable(record)
+		{
+			let recordTemplate = document.getElementById("recordTemplate");
+			let cloneNode = recordTemplate.cloneNode(true);
+			cloneNode.getElementsByTagName("td")[0].innerHTML = record["Name"];
+			cloneNode.getElementsByTagName("td")[1].innerHTML = cardinalToOrdinal(record["Ranking"]);
+			if(parseInt(record["MMR"]) >= 0)
+			{
+				cloneNode.getElementsByTagName("td")[2].innerHTML = "+" + record["MMR"];
+				cloneNode.getElementsByTagName("td")[1].style.color = "#72A473";
+				cloneNode.getElementsByTagName("td")[2].style.color = "#72A473";
+			}
+			else
+			{
+				cloneNode.getElementsByTagName("td")[2].innerHTML = record["MMR"];
+				cloneNode.getElementsByTagName("td")[1].style.color = "#A35E5D";
+				cloneNode.getElementsByTagName("td")[2].style.color = "#A35E5D";
+			}
+			cloneNode.removeAttribute("id");
+			cloneNode.setAttribute("data-id", record["ID"]);
+			document.getElementsByTagName("tbody")[0].appendChild(cloneNode);
+		}
+
+		function DeleteRecordFromTable(data)
+		{
+			let gameDetails = document.getElementsByClassName("gameDetail");
+			for(let i = 0; i < gameDetails.length; i++)
+			{
+				if(parseInt(gameDetails[i].getAttribute("data-id")) == parseInt(data))
+				{
+					gameDetails[i].remove();
+					break;
+				}
+			}
+		}
+
+		function UpdateRecordIntoTable(record)
+		{
+			let gameDetails = document.getElementsByClassName("gameDetail");
+			let gameDetail = null;
+			for(let i = 0; i < gameDetails.length; i++)
+			{
+				if(parseInt(gameDetails[i].getAttribute("data-id")) == parseInt(record["ID"]))
+				{
+					let targetGameDetail = gameDetails[i];
+					targetGameDetail.getElementsByTagName("td")[0].innerHTML = record["Name"];
+					targetGameDetail.getElementsByTagName("td")[1].innerHTML = cardinalToOrdinal(record["Ranking"]);
+					if(parseInt(record["MMR"]) >= 0)
+					{
+						targetGameDetail.getElementsByTagName("td")[2].innerHTML = "+" + record["MMR"];
+						targetGameDetail.getElementsByTagName("td")[1].style.color = "#72A473";
+						targetGameDetail.getElementsByTagName("td")[2].style.color = "#72A473";
+					}
+					else
+					{
+						targetGameDetail.getElementsByTagName("td")[2].innerHTML = record["MMR"];
+						targetGameDetail.getElementsByTagName("td")[1].style.color = "#A35E5D";
+						targetGameDetail.getElementsByTagName("td")[2].style.color = "#A35E5D";
+					}
+					break;
+				}
+			}
+		}
+
+        window.addEventListener('DOMContentLoaded', init, false);
+	</script>
+</head>
+<body>
+	<table cellpadding="0px" cellspacing="0px">
+		<tbody>
+			<tr class="title">
+				<td colspan="4">羈絆效果</td>
+			</tr>
+			<tr class="originDetail">
+				<td colspan="2" width="50%">
+					<span>幻境</span>
+					<br>
+					<span id="mirageEffect"></span>
+				</td>
+				<td colspan="2" width="50%">
+					<span>嚼嚼</span>
+					<br>
+					<span id="nomsyOrigin"></span>
+				</td>
+			</tr class="mmrDetail">
+			<tr class="title">
+				<td colspan="4">天梯分數</td>
+			</tr>
+			<tr class="mmrDetail">
+				<td colspan="2" width="50%">
+					<span>開始</span>
+					<br>
+					<span id="startMMR"></span>
+				</td>
+				<td colspan="2" width="50%">
+					<span>目前</span>
+					<br>
+					<span id="currentMMR"></span>
+				</td>
+			</tr class="mmrDetail">
+			<tr class="title">
+				<td colspan="4">最近遊戲</td>
+			</tr>
+			<tr class="gameSubTitle">
+				<td colspan="2">陣容</td>
+				<td>名次</td>
+				<td>分數</td>
+			</tr>
+			<tr id="recordTemplate" class="gameDetail">
+				<td colspan="2">Template</td>
+				<td>1st</td>
+				<td>+100</td>
+			</tr>
+		</tbody>
+	</table>
+</body>
+</html>

@@ -1,0 +1,38 @@
+#mmrTable span, select, input, label, button, #recordTable
+{
+    font-size: 24px;
+}
+#recordTable
+{
+    text-align: center;
+    border-collapse: collapse;
+}
+#recordTable, #recordTable th, #recordTable td
+{
+    border: 1px solid #000000;
+}
+#recordTable .columnName
+{
+    min-width: 200px;
+
+}
+#recordTable .columnButton
+{
+    min-width: 150px;
+}
+#recordTable tr td:nth-child(1)
+{
+    text-align: left;
+}
+#recordTemplate
+{
+    display: none;
+}
+#divForRecordEditing
+{
+    margin-bottom: 10px;
+}
+tr.editing
+{
+    background-color: #4aaa6f;
+}

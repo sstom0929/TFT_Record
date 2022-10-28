@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>設定</title>
+    <link rel="stylesheet" href="../static/adminStyle.css">
+	<script src="https://code.jquery.com/jquery-3.6.1.js" integrity="sha256-3zlB5s2uwoUzrXK3BT7AX3FyvojsraNFxCc2vC/7pNI=" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+	<script type="text/javascript">
+		function isInsertingTableValid()
+		{
+			if(document.getElementById("insertingName").value.trim() == "")
+			{
+				alert("陣容不可為空白");
+				return false;
+			}
+			return true;
+		}
+
+		function isEditingTableValid()
+		{
+			if(document.getElementById("editingName").value.trim() == "")
+			{
+				alert("陣容不可為空白");
+				return false;
+			}
+			return true;
+		}
+
+		function updateMain()
+		{
+			let mmrData = {};
+            mmrData["startMMRGroup"] = document.getElementById("startMMRGroup").value;
+            mmrData["startMMRSubgroup"] = document.getElementById("startMMRSubgroup").value;
+			mmrData["startMMRValue"] = document.getElementById("startMMRValue").value;
+			mmrData["currentMMRGroup"] = document.getElementById("currentMMRGroup").value;
+			mmrData["currentMMRSubgroup"] = document.getElementById("currentMMRSubgroup").value;
+			mmrData["currentMMRValue"] = document.getElementById("currentMMRValue").value;
+			mmrData["mirageEffect"] = document.getElementById("mirageEffect").value;
+			mmrData["nomsyOrigin"] = document.getElementById("nomsyOrigin").value;
+            
+			$.ajax(
+				{
+					url: "/updateMain",
+					type: "POST",
+					data: JSON.stringify(mmrData),
+					success: function (response) 
+					{
+						console.log(response);
+					},
+					error: function (thrownError)
+					{
+					 	console.log(thrownError);
+					}
+				}
+            );
+		}
+
+		function insertRecord()
+		{
+			if(!isInsertingTableValid()) return;
+
+			let recordData = {};
+            recordData["Name"] = document.getElementById("insertingName").value;
+			recordData["Ranking"] = document.getElementById("insertingRanking").value;
+			recordData["MMR"] = document.getElementById("insertingMMR").value;
+            
+			$.ajax(
+				{
+					url: "/insertRecord",
+					type: "POST",
+					data: JSON.stringify(recordData),
+					success: function (response) 
+					{
+						console.log(response);
+						insertRecordIntoTable(response["record"]);
+						document.getElementById("insertingName").value = "";
+						document.getElementById("insertingRanking").value = 1;
+						document.getElementById("insertingMMR").value = 0;
+					},
+					error: function (thrownError)
+					{
+					 	console.log(thrownError);
+					}
+				}
+            );
+		}
+
+		function comfirmEditingRecord(button)
+		{	
+			if(!isEditingTableValid()) return;
+
+			let recordData = {};
+			recordData["ID"] = document.getElementById("editingID").value;
+            recordData["Name"] = document.getElementById("editingName").value;
+			recordData["Ranking"] = document.getElementById("editingRanking").value;
+			recordData["MMR"] = document.getElementById("editingMMR").value;
+            
+			$.ajax(
+				{
+					url: "/updateRecord",
+					type: "POST",
+					data: JSON.stringify(recordData),
+					success: function (response) 
+					{
+						console.log(response);
+						hideEditingTable();
+					},
+					error: function (thrownError)
+					{
+					 	console.log(thrownError);
+					}
+				}
+            );
+		}
+
+		function cancelEditingRecord()
+		{
+			hideEditingTable();
+		}
+
+		function updateRecord(button)
+		{
+			if(!isEditingTableValid()) return;
+
+			let recordData = {};
+			recordData["ID"] = document.getElementById("editingID").value;
+            recordData["Name"] = document.getElementById("editingName").value;
+			recordData["Ranking"] = document.getElementById("editingRanking").value;
+			recordData["MMR"] = document.getElementById("editingMMR").value;
+            
+			$.ajax(
+				{
+					url: "/updateRecord",
+					type: "POST",
+					data: JSON.stringify(recordData),
+					success: function (response) 
+					{
+						console.log(response);
+						location.reload();
+					},
+					error: function (thrownError)
+					{
+					 	console.log(thrownError);
+					}
+				}
+            );
+		}
+
+		function hideEditingTable()
+		{
+			let editing = document.getElementsByClassName("editing")[0];
+			if(editing != null) editing.removeAttribute("class");
+			document.getElementById("divForRecordEditing").setAttribute("style", "display: none;");
+		}
+
+		function startEditingRecord(button)
+		{
+			hideEditingTable();
+
+			let tr = button.parentElement.parentElement;
+			tr.setAttribute("class", "editing");
+			document.getElementById("editingID").value = tr.getAttribute("data-id");
+			document.getElementById("editingName").value = tr.getElementsByTagName("td")[0].innerHTML;
+			document.getElementById("editingRanking").value = tr.getElementsByTagName("td")[1].innerHTML;
+			document.getElementById("editingMMR").value = tr.getElementsByTagName("td")[2].innerHTML;
+
+			document.getElementById("divForRecordEditing").removeAttribute("style");
+		}
+
+		function deleteRecord(button)
+		{
+			let recordData = {};
+			let tr = button.parentElement.parentElement;
+			recordData["ID"] = tr.getAttribute("data-id");
+            
+			$.ajax(
+				{
+					url: "/deleteRecord",
+					type: "POST",
+					data: JSON.stringify(recordData),
+					success: function (response) 
+					{
+						console.log(response);
+						hideEditingTable();
+						tr.remove();
+					},
+					error: function (thrownError)
+					{
+					 	console.log(thrownError);
+					}
+				}
+            );
+		}
+        
+        function init()
+        {
+            var data = {{ data|safe }};
+            console.log(data);
+
+            // Initial MMR Table
+            data["main"].forEach(
+            	row => 
+            	{
+            		document.getElementById(row["Key"]).value = row["Value"];
+            	}
+            );
+
+            // Initial Record Table
+            data["record"].forEach(
+            	row =>
+            	{
+            		insertRecordIntoTable(row);
+            	}
+            )
+			
+			document.getElementById('mirageEffect').addEventListener('change', updateMain);
+			document.getElementById('nomsyOrigin').addEventListener('change', updateMain);
+			document.getElementById('startMMRGroup').addEventListener('change', updateMain);
+			document.getElementById('startMMRSubgroup').addEventListener('change', updateMain);
+			document.getElementById('startMMRValue').addEventListener('change', updateMain);
+			document.getElementById('currentMMRGroup').addEventListener('change', updateMain);
+			document.getElementById('currentMMRSubgroup').addEventListener('change', updateMain);
+			document.getElementById('currentMMRValue').addEventListener('change', updateMain);
+
+			document.getElementById('divForRecordEditing').setAttribute("style", "display: none;");
+        }
+
+		function insertRecordIntoTable(record)
+		{
+			let recordTemplate = document.getElementById("recordTemplate");
+			let cloneNode = recordTemplate.cloneNode(true);
+			cloneNode.getElementsByTagName("td")[0].innerHTML = record["Name"];
+			cloneNode.getElementsByTagName("td")[1].innerHTML = record["Ranking"];
+			cloneNode.getElementsByTagName("td")[2].innerHTML = record["MMR"];
+			cloneNode.setAttribute("data-id", record["ID"]);
+			cloneNode.removeAttribute("id");
+			document.getElementById("recordTable").getElementsByTagName("tbody")[0].appendChild(cloneNode);
+		}
+
+        document.addEventListener('DOMContentLoaded', init, false);
+	</script>
+</head>
+<body>
+	<h1>種族羈絆</h1>
+	<table id="originTable" autocomplete="off">
+        <tbody>
+        	<tr>
+        		<td>
+        			<label for="mirageEffect">幻境效果：</span>
+        		</td>
+        		<td>
+        			<select id="mirageEffect">
+        				<option value="閃電">閃電</option>
+						<option value="戰國">戰國</option>
+						<option value="黎明">黎明</option>
+						<option value="決鬥">決鬥</option>
+						<option value="咒劍">咒劍</option>
+						<option value="處刑">處刑</option>
+						<option value="海盜">海盜</option>
+					</select>
+        		</td>
+        	</tr>
+        	<tr>
+        		<td>
+        			<label for="nomsyOrigin">嚼嚼種族：</span>
+        		</td>
+        		<td>
+        			<select id="nomsyOrigin">
+        				<option value="重砲手">重砲手</option>
+						<option value="法師">法師</option>
+						<option value="飲魔師">飲魔師</option>
+					</select>
+        		</td>
+        	</tr>
+        </tbody>
+    </table>
+	<h1>天梯分數</h1>
+    <table id="mmrTable">
+        <tbody>
+        	<tr>
+        		<td>
+        			<span>起始分數：</span>
+        		</td>
+        		<td>
+        			<select id="startMMRGroup">
+        				<option value="鐵牌">鐵牌</option>
+						<option value="銅牌">銅牌</option>
+						<option value="銀牌">銀牌</option>
+						<option value="金牌">金牌</option>
+						<option value="白金">白金</option>
+						<option value="鑽石">鑽石</option>
+						<option value="大師">大師</option>
+			            <option value="宗師">宗師</option>
+						<option value="菁英">菁英</option>
+					</select>
+        		</td>
+        		<td>
+        			<select id="startMMRSubgroup">
+        				<option value="I">I</option>
+						<option value="II">II</option>
+						<option value="III">III</option>
+						<option value="IV">IV</option>
+					</select>
+        		</td>
+        		<td>
+        			<input type="number" id="startMMRValue">
+        		</td>
+        	</tr>
+        	<tr>
+        		<td>
+        			<span>目前分數：</span>
+        		</td>
+        		<td>
+        			<select id="currentMMRGroup">
+        				<option value="鐵牌">鐵牌</option>
+						<option value="銅牌">銅牌</option>
+						<option value="銀牌">銀牌</option>
+						<option value="金牌">金牌</option>
+						<option value="白金">白金</option>
+						<option value="鑽石">鑽石</option>
+						<option value="大師">大師</option>
+			            <option value="宗師">宗師</option>
+						<option value="菁英">菁英</option>
+					</select>
+        		</td>
+        		<td>
+        			<select id="currentMMRSubgroup">
+        				<option value="I">I</option>
+						<option value="II">II</option>
+						<option value="III">III</option>
+						<option value="IV">IV</option>
+					</select>
+        		</td>
+        		<td>
+        			<input type="number" id="currentMMRValue">
+        		</td>
+        	</tr>
+        </tbody>
+    </table>
+    <hr>
+	<h1>新增近期對戰</h1>
+    <table id="recordInsertingTable" autocomplete="off">
+        <tbody>
+        	<tr>
+        		<td>
+        			<label for="insertingName">陣容：</span>
+        		</td>
+        		<td>
+        			<input id="insertingName" type="text" placeholder="陣容名稱">
+        		</td>
+        	</tr>
+        	<tr>
+        		<td>
+        			<label for="insertingRanking">名次：</span>
+        		</td>
+        		<td>
+        			<input id="insertingRanking" type="number" value="1">
+        		</td>
+        	</tr>
+        	<tr>
+        		<td>
+        			<label for="insertingMMR">分數：</span>
+        		</td>
+        		<td>
+        			<input id="insertingMMR" type="number" value="0">
+        		</td>
+        	</tr>
+        </tbody>
+    </table>
+    <button onclick="insertRecord()">新增</button>
+    <hr>
+	<div id="divForRecordEditing">
+		<h1>修改對戰記錄</h1>
+		<table id="recordEditingTable" autocomplete="off">
+			<tbody>
+				<tr style="display: none;">
+					<td>
+						<label for="editingID">陣容：</span>
+					</td>
+					<td>
+						<input id="editingID" type="value">
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<label for="editingName">陣容：</span>
+					</td>
+					<td>
+						<input id="editingName" type="text" placeholder="陣容名稱">
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<label for="editingranking">名次：</span>
+					</td>
+					<td>
+						<input id="editingRanking" type="number" value="1">
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<label for="editingMMR">分數：</span>
+					</td>
+					<td>
+						<input id="editingMMR" type="number" value="0">
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		<button onclick="comfirmEditingRecord(this)">確認</button>
+		<button onclick="cancelEditingRecord()">取消</button>
+	</div>
+    <table id="recordTable">
+    	<thead>
+    		<tr>
+    			<th class="columnName">陣容</th>
+    			<th>名次</th>
+    			<th>分數</th>
+    			<th class="columnButton"></th>
+    		</tr>
+    	</thead>
+    	<tbody>
+    		<tr id="recordTemplate">	
+    			<td></td>
+    			<td></td>
+    			<td></td>
+    			<td>
+    				<button onclick="startEditingRecord(this)">修改</button>
+    				<button onclick="deleteRecord(this)">刪除</button>
+    			</td>
+    		</tr> 
+    	</tbody>
+    </table>
+</body>
+</html>

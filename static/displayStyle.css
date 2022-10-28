@@ -1,0 +1,58 @@
+body
+{
+	width: 250px;
+	margin: 0px;
+	font-family: Arial;
+}
+table
+{
+	width: 100%;
+	text-align: center;
+}
+.title, .gameSubTitle
+{
+	background-color: #1C2021;
+	height: 40px;
+	text-align: center;
+	color: #ffffff;	
+	font-weight: bold;
+}
+.mmrDetail, .originDetail
+{
+	background-color: #2D3135;
+	height: 50px;
+}
+.mmrDetail span:nth-child(1), .originDetail span:nth-child(1)
+{
+	color: #7E8082;
+}
+.mmrDetail span:nth-child(3), .originDetail span:nth-child(3)
+{
+	color: #ffffff;
+	font-weight: bolder;
+}
+.gameSubTitle td
+{
+	border-top: 2px solid #2D3135;
+}
+.gameDetail
+{
+	background-color: #2D3135;
+	color: #ffffff;
+}
+.gameDetail td
+{
+	padding-top: 7px;
+	padding-bottom: 7px;
+	border-top: 2px solid #1C2021;
+}
+.gameDetail td:nth-child(1)
+{
+	text-align: left;
+	padding-left: 5%;
+	font-weight: bolder;
+}
+#recordTemplate
+{
+	display: none;
+}
